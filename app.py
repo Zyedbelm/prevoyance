@@ -117,10 +117,10 @@ def saisir_parametres_personne(prefix: str, titre: str, defaults: Dict[str, floa
             st.subheader("Salaire & LPP")
             salaire_brut_initial = st.number_input(
                 "Salaire brut annuel",
-                min_value=30_000,
-                max_value=300_000,
+                min_value=float(30_000),
+                max_value=float(300_000),
                 value=float(defaults["salaire"]),
-                step=1_000,
+                step=float(1_000),
                 help="Salaire soumis à la LPP (source : Salarium OFS).",
                 key=f"{prefix}_salaire",
             )
@@ -144,28 +144,28 @@ def saisir_parametres_personne(prefix: str, titre: str, defaults: Dict[str, floa
             )
             montant_coordination = st.number_input(
                 "Montant de coordination",
-                min_value=0,
-                max_value=40_000,
+                min_value=float(0),
+                max_value=float(40_000),
                 value=float(defaults["coordination"]),
-                step=25,
+                step=float(25),
                 help="Déduction légale LPP 2024 : CHF 25 725 (OFAS).",
                 key=f"{prefix}_coordination",
             )
             lpp_capital_initial = st.number_input(
                 "Capital LPP existant",
-                min_value=0,
-                max_value=2_000_000,
+                min_value=float(0),
+                max_value=float(2_000_000),
                 value=float(defaults["capital_lpp"]),
-                step=1_000,
+                step=float(1_000),
                 key=f"{prefix}_capital_lpp",
             )
             col_plafond, col_suroblig = st.columns([2, 1])
             salaire_coordonne_max = col_plafond.number_input(
                 "Salaire annuel maximum assuré LPP",
-                min_value=0,
-                max_value=120_000,
+                min_value=float(0),
+                max_value=float(120_000),
                 value=float(defaults["plafond"]),
-                step=1_000,
+                step=float(1_000),
                 help="Plafond obligatoire 2024 : CHF 88 200.",
                 key=f"{prefix}_plafond",
             )
@@ -682,11 +682,11 @@ def main() -> None:
         afficher_resultats(resultat_principal, "Profil principal", "principal_base")
 
     st.divider()
-    st.header("Scénario : investissement immobilier (retrait total LPP + piliers 3a & S&P 500)")
+    st.header("Scénario : investissement immobilier (retrait total LPP + 3ᵉ pilier A)")
     scenario_immo = st.checkbox(
         "Activer le scénario immobilier",
         value=False,
-        help="Simule un retrait unique des capitaux LPP, 3ᵉ pilier et S&P 500 à une année n pour financer un bien immobilier.",
+        help="Simule un retrait unique des capitaux LPP et 3ᵉ pilier A à une année n pour financer un bien immobilier.",
         key="scenario_immo_checkbox",
     )
 

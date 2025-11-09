@@ -144,15 +144,9 @@ class CalculateurPrevoyance:
 
         for annee in range(1, self.annees + 1):
             age = self.age_depart + annee
-            retrait_immobilier = None
-
             for _ in range(12):
                 capital = capital * (1 + taux_mensuel) + self.montant_mensuel_sp500
                 versements_totaux += self.montant_mensuel_sp500
-
-            if annee_retrait is not None and annee == annee_retrait:
-                retrait_immobilier = capital
-                capital = 0.0
 
             detail.append(
                 {
@@ -160,7 +154,6 @@ class CalculateurPrevoyance:
                     "age": age,
                     "capital_sp500": capital,
                     "versements_annee": self.montant_mensuel_sp500 * 12,
-                    "retrait_immobilier": retrait_immobilier,
                 }
             )
 
@@ -263,13 +256,12 @@ class CalculateurPrevoyance:
         montant_retrait_immo = 0.0
         for i in range(self.annees):
             retrait_3a = detail_3a[i].get("retrait_immobilier")
-            retrait_sp500 = detail_sp500[i].get("retrait_immobilier")
             retrait_lpp = detail_lpp[i].get("retrait_immobilier")
             if annee_retrait is not None and i + 1 == annee_retrait:
                 montant_retrait_immo = sum(
                     filter(
                         None,
-                        [retrait_3a, retrait_sp500, retrait_lpp],
+                        [retrait_3a, retrait_lpp],
                     )
                 )
 
