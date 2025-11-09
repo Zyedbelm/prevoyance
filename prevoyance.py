@@ -5,7 +5,7 @@ calculs financiers décrits dans le script initial fourni par l'utilisateur.
 """
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -26,6 +26,8 @@ class ResultatPrevoyance:
     cotisations_employe_lpp: float
     cotisations_employeur_lpp: float
     detail_annuel: List[dict]
+    annee_retrait: Optional[int] = None
+    montant_retrait_immo: float = 0.0
 
 
 class CalculateurPrevoyance:
@@ -100,7 +102,7 @@ class CalculateurPrevoyance:
             return mapping["40_49"]
         return mapping["50_plus"]
 
-    def calculer_3a(self) -> tuple:
+    def calculer_3a(self, annee_retrait: Optional[int] = None) -> tuple:
         """Calcule le capital du 3ème pilier A avec intérêts composés mensuels."""
 
         capital = 0.0
@@ -110,10 +112,15 @@ class CalculateurPrevoyance:
 
         for annee in range(1, self.annees + 1):
             age = self.age_depart + annee
+            retrait_immobilier = None
 
             for _ in range(12):
                 capital = capital * (1 + taux_mensuel) + self.montant_mensuel_3a
                 versements_totaux += self.montant_mensuel_3a
+
+            if annee_retrait is not None and annee == annee_retrait:
+                retrait_immobilier = capital
+                capital = 0.0
 
             detail.append(
                 {
@@ -121,12 +128,13 @@ class CalculateurPrevoyance:
                     "age": age,
                     "capital_3a": capital,
                     "versements_annee": self.montant_mensuel_3a * 12,
+                    "retrait_immobilier": retrait_immobilier,
                 }
             )
 
         return capital, versements_totaux, detail
 
-    def calculer_sp500(self) -> tuple:
+    def calculer_sp500(self, annee_retrait: Optional[int] = None) -> tuple:
         """Calcule le capital investi dans le SP500 avec rendement net."""
 
         capital = 0.0
@@ -136,10 +144,15 @@ class CalculateurPrevoyance:
 
         for annee in range(1, self.annees + 1):
             age = self.age_depart + annee
+            retrait_immobilier = None
 
             for _ in range(12):
                 capital = capital * (1 + taux_mensuel) + self.montant_mensuel_sp500
                 versements_totaux += self.montant_mensuel_sp500
+
+            if annee_retrait is not None and annee == annee_retrait:
+                retrait_immobilier = capital
+                capital = 0.0
 
             detail.append(
                 {
@@ -147,12 +160,13 @@ class CalculateurPrevoyance:
                     "age": age,
                     "capital_sp500": capital,
                     "versements_annee": self.montant_mensuel_sp500 * 12,
+                    "retrait_immobilier": retrait_immobilier,
                 }
             )
 
         return capital, versements_totaux, detail
 
-    def calculer_lpp(self) -> tuple:
+    def calculer_lpp(self, annee_retrait: Optional[int] = None) -> tuple:
         """Calcule le capital LPP avec taux fixes et évolution salariale."""
 
         capital = self.lpp_capital_initial
@@ -180,10 +194,15 @@ class CalculateurPrevoyance:
             cotisation_mensuelle_employe = cotisation_employe_annuelle / 12
             cotisation_mensuelle_employeur = cotisation_employeur_annuelle / 12
             cotisation_mensuelle_totale = cotisation_annuelle / 12
+            retrait_immobilier = None
 
             for _ in range(12):
                 capital = capital * (1 + self.rendement_lpp_mensuel)
                 capital += cotisation_mensuelle_totale
+
+            if annee_retrait is not None and annee == annee_retrait:
+                retrait_immobilier = capital
+                capital = 0.0
 
             cotisations_totales += cotisation_annuelle
             cotisations_employe_totales += cotisation_employe_annuelle
@@ -202,6 +221,7 @@ class CalculateurPrevoyance:
                     "cotisation_employeur": cotisation_employeur_annuelle,
                     "cotisation_totale": cotisation_annuelle,
                     "capital_lpp": capital,
+                    "retrait_immobilier": retrait_immobilier,
                 }
             )
 
@@ -219,18 +239,18 @@ class CalculateurPrevoyance:
         facteur_erosion = (1 + self.inflation) ** self.annees
         return montant / facteur_erosion
 
-    def calculer(self) -> ResultatPrevoyance:
+    def calculer(self, annee_retrait: Optional[int] = None) -> ResultatPrevoyance:
         """Calcule l'ensemble de la prévoyance."""
 
-        capital_3a, versements_3a, detail_3a = self.calculer_3a()
-        capital_sp500, versements_sp500, detail_sp500 = self.calculer_sp500()
+        capital_3a, versements_3a, detail_3a = self.calculer_3a(annee_retrait=annee_retrait)
+        capital_sp500, versements_sp500, detail_sp500 = self.calculer_sp500(annee_retrait=annee_retrait)
         (
             capital_lpp,
             cotisations_lpp,
             cotisations_employe_lpp,
             cotisations_employeur_lpp,
             detail_lpp,
-        ) = self.calculer_lpp()
+        ) = self.calculer_lpp(annee_retrait=annee_retrait)
 
         capital_total_nominal = capital_3a + capital_sp500 + capital_lpp
 
@@ -240,17 +260,30 @@ class CalculateurPrevoyance:
         capital_total_reel = capital_3a_reel + capital_sp500_reel + capital_lpp_reel
 
         detail_annuel = []
+        montant_retrait_immo = 0.0
         for i in range(self.annees):
-            detail_annuel.append(
-                {
-                    **detail_lpp[i],
-                    "capital_3a": detail_3a[i]["capital_3a"],
-                    "capital_sp500": detail_sp500[i]["capital_sp500"],
-                    "capital_total": detail_lpp[i]["capital_lpp"]
-                    + detail_3a[i]["capital_3a"]
-                    + detail_sp500[i]["capital_sp500"],
-                }
-            )
+            retrait_3a = detail_3a[i].get("retrait_immobilier")
+            retrait_sp500 = detail_sp500[i].get("retrait_immobilier")
+            retrait_lpp = detail_lpp[i].get("retrait_immobilier")
+            if annee_retrait is not None and i + 1 == annee_retrait:
+                montant_retrait_immo = sum(
+                    filter(
+                        None,
+                        [retrait_3a, retrait_sp500, retrait_lpp],
+                    )
+                )
+
+            entree = {
+                **detail_lpp[i],
+                "capital_3a": detail_3a[i]["capital_3a"],
+                "capital_sp500": detail_sp500[i]["capital_sp500"],
+                "capital_total": detail_lpp[i]["capital_lpp"]
+                + detail_3a[i]["capital_3a"]
+                + detail_sp500[i]["capital_sp500"],
+            }
+            if annee_retrait is not None and i + 1 == annee_retrait:
+                entree["retrait_immo_total"] = montant_retrait_immo
+            detail_annuel.append(entree)
 
         return ResultatPrevoyance(
             capital_3a_nominal=capital_3a,
@@ -267,6 +300,8 @@ class CalculateurPrevoyance:
             cotisations_employe_lpp=cotisations_employe_lpp,
             cotisations_employeur_lpp=cotisations_employeur_lpp,
             detail_annuel=detail_annuel,
+            annee_retrait=annee_retrait,
+            montant_retrait_immo=montant_retrait_immo,
         )
 
 
